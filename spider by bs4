@@ -1,0 +1,47 @@
+import json
+import requests
+from requests.exceptions import RequestException
+from bs4 import BeautifulSoup
+
+def get_one_page(url):
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36'}
+        response = requests.get(url, headers=headers)
+        response.encoding = response.apparent_encoding
+        if response.status_code == 200:
+            return response.text
+        return None
+    except RequestException:
+        return None
+
+def parse_one_page(html):
+    soup = BeautifulSoup(html, 'lxml')
+    name = [name.string  for name in soup.find_all('p', 'name')]
+    actor = [actor.string for actor in soup.find_all('p', 'star')]
+    time = [time.string for time in soup.find_all('p', 'releasetime')]
+    score1 = [score.string for score in soup.find_all('i', 'integer')]
+    score2 = [score.string for score in soup.find_all('i', 'fraction')]
+    for item in range(len(name)):
+        yield{
+            'name': name[item],
+            'actor': actor[item][3:].strip(),
+            'time': time[item][5:],
+            'score': score1[item]+score2[item]
+        }
+
+
+def write_to_file(item):
+    with open('猫眼2-3.txt', 'a',  encoding='utf-8') as f:
+        f.write(json.dumps(item, ensure_ascii=False)+'\n')
+
+
+def main(i):
+    url = 'http://maoyan.com/board/4?offset={}'.format(i*10)
+    html = get_one_page(url)
+    for item in parse_one_page(html):
+        write_to_file(item)
+
+
+if __name__ == '__main__':
+    for i in range(10):
+        main(i)
